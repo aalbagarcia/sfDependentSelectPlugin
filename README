@@ -1,0 +1,700 @@
+sfDependentSelectPlugin
+=======================
+
+Un plugin para enlazar selects de una forma simple y elegante
+
+    $this->widgetSchema['pais_id'] = new sfWidgetFormDoctrineChoice(array(
+        'model'   => 'Pais'
+    ));
+    $this->widgetSchema['provincia_id'] = new sfWidgetFormDoctrineDependentSelect(array(
+        'model'   => 'Provincia', 
+        'depends' => 'Pais'
+    ));
+    
+**Nota:** Documentación original en español disponible en doc/README_es.
+
+
+Características
+---------------
+
+  * Modo estático y modo AJAX con módulo automático (respetando add\_empty, 
+    {peer|table}\_method, order\_by, etc),
+    
+  * Permite enlazar listas de array con listas de modelos o entre modelos 
+    (**niveles ilimitados**),
+    
+  * Soporte para Doctrine y Propel,
+  
+  * Fácil de personalizar y extender.
+
+
+Instalación
+-----------
+
+  * Instalar el plugin
+  
+        $ php symfony plugin:install sfDependentSelectPlugin
+        
+  * Publicar javascript
+  
+        $ php symfony plugin:publish-assets
+    
+  * Limpiar la cache
+  
+        $ php symfony cache:clear
+    
+  * Habilitar el plugin en la configuración del proyecto 
+    _(config/ProjectConfiguration.class.php)_
+  
+        $this->enablePlugins(..., 'sfDependentSelectPlugin');
+    
+  * Habilitar el módulo *sfDependentSelectAuto* si deseas utilizar ajax 
+    automatizado _(apps/{tuapp}/config/settings.yml)_
+  
+        all:
+          .settings:
+            ...        
+            enabled_modules:        [sfDependentSelectAuto]
+
+
+Dependencias
+------------
+
+  * _jQuery:_ solamente si utilizas AJAX. Debes agregarla tú en caso necesites 
+    esta funcionalidad.
+
+
+Contenido
+---------
+
+### Widgets
+
+  * _sfWidgetFormArrayDependentSelect:_ despliega un select utilizando como 
+    fuente de datos un array,
+  * _sfWidgetFormDoctrineDependentSelect:_ utiliza Doctrine como fuente de datos,
+  * _sfWidgetFormPropelDependentSelect:_ utiliza Propel como fuente de datos.
+
+### Actions
+
+  * _sfActionsDependentSelect:_ implementa una acción "_ajax" que devuelve los 
+    valores necesarios para cada petición.
+
+### Modules
+
+  * _sfDependentSelectAuto:_ es el módulo utilizado por defecto por los widgets, 
+    simplemente extiende a _sfActionsDependentSelect_.
+
+
+Ejemplos de uso
+---------------
+
+Los ejemplos son para Doctrine, pero puedes hacerlo de igual forma para propel 
+utilizando la clase _sfWidgetFormPropelDependentSelect_.
+
+### Pais, provincia y ciudad
+
+Típico caso en que se tiene paises, provincias y ciudades relacionadas. Al 
+momento de crear una dependencia a la ciudad desde otra entidad, se crea un gran 
+problema a la hora de mostrar el formulario, ya que aparecen todas las ciudades 
+de todas las provincias de todos los paises mezclados.
+
+A continuación, la solución. Se hará con una persona que vive en una ciudad.
+
+  * _config/doctrine/schema.yml_:
+  
+        Pais:
+          columns:
+            nombre: string(45)
+            
+        Provincia:
+          columns:
+            pais_id: integer
+            nombre: string(45)
+          relations:
+            Pais:
+              foreignAlias: Provincias
+              
+        Ciudad:
+          columns:
+            provincia_id: integer
+            nombre: string(45)
+          relations:
+            Provincia:
+              foreignAlias: Ciudades
+              
+        Persona:
+          columns:
+            ciudad_id: integer
+            nombre: string(45)
+          relations:
+            Ciudad:
+              foreignAlias: Personas
+
+  * _lib/form/doctrine/PersonaForm.class.php_:
+  
+        class PersonaForm extends BasePersonaForm
+        {
+            public function configure()
+            {
+                // widgets
+            
+                $this->widgetSchema['pais_id'] = new sfWidgetFormDoctrineChoice(array(
+                    'model'     => 'Pais',
+                    'add_empty' => 'Seleccione país',
+                ));
+                
+                $this->widgetSchema['provincia_id'] = new sfWidgetFormDoctrineDependentSelect(array(
+                    'model'     => 'Provincia', 
+                    'depends'   => 'Pais',
+                    'add_empty' => 'Seleccione provincia',
+                ));
+                
+                $this->widgetSchema['ciudad_id'] = new sfWidgetFormDoctrineDependentSelect(array(
+                    'model'     => 'Ciudad', 
+                    'depends'   => 'Provincia',
+                    'add_empty' => 'Seleccione ciudad',
+                ));    
+                
+                // validadores
+                
+                $this->validatorSchema['pais_id'] = new sfValidatorDoctrineChoice(array(
+                    'model' => 'Pais',
+                ));
+                
+                $this->validatorSchema['provincia_id'] = new sfValidatorDoctrineChoice(array(
+                    'model' => 'Provincia',
+                ));          
+                
+                // el validador de 'ciudad_id' está en BasePersonaForm    
+            }
+        }
+        
+Listo, con eso ya debería funcionar. Se mostrará el select "independiente" para 
+paises, y de acuerdo al valor de éste serán las provincias mostradas. De igual
+forma para con las ciudades según la provincia.
+  
+Cabe destacar que el ejemplo anterior no hace llamadas remotas (AJAX), simplemente 
+carga los selects con los diferentes grupos de datos y los va mostrando de 
+acuerdo a los valores seleccionados en el select del cual depende. Por eso notarás 
+la rapidez en el funcionamiento, ideal para pequeños/medianos conjuntos de datos.
+
+Cuando los niveles son profundos y con grandes cantidades de opciones, seguramente
+querrás utilizar AJAX. A continuación veremos cómo modificar el ejemplo anterior 
+para añadir esta característica facilmente.
+
+#### Ahora con AJAX
+
+**Importante:** Recuerda cargar jQuery sino no se harán las llamadas remotas.
+
+  * _lib/form/doctrine/PersonaForm.class.php_:
+  
+        class PersonaForm extends BasePersonaForm
+        {
+            public function configure()
+            {
+                // widgets
+            
+                $this->widgetSchema['pais_id'] = new sfWidgetFormDoctrineDependentSelect(array(
+                    'model'     => 'Pais',
+                    'add_empty' => 'Seleccione país',
+                    'ajax'      => true,
+                ));
+                
+                // si hubieses querido cargarlo sin ajax (ya que son pocos datos):
+                #$this->widgetSchema['pais_id'] = new sfWidgetFormDoctrineChoice(array(
+                #    'model'     => 'Pais', 
+                #    'add_empty' => 'Seleccione pais',
+                #));                 
+                
+                $this->widgetSchema['provincia_id'] = new sfWidgetFormDoctrineDependentSelect(array(
+                    'model'        => 'Provincia', 
+                    'depends'      => 'Pais',
+                    'add_empty'    => 'Seleccione provincia',
+                    'ajax'         => true,
+                    // aprovechamos para mostrar otras opciones
+                    #'ref_method'   => 'getPaisId',
+                    #'url'          =>  sfContext::getInstance()->getController()->genUrl('sfDependentSelectAuto/_ajax'),
+                    #'cache'        => true,
+                    // están disponibles las mismas que sfWidgetForm{Doctrine|Propel}Choice
+                    'order_by'      => array('nombre', 'asc'),
+                    #'method'       => '__toString',
+                    #'key_method'   => 'getPrimaryKey',
+                    #'table_method' => 'getPaisesEuropeos',
+                ));
+                
+                $this->widgetSchema['ciudad_id'] = new sfWidgetFormDoctrineDependentSelect(array(
+                    'model'     => 'Ciudad', 
+                    'depends'   => 'Provincia',
+                    'add_empty' => 'Seleccione ciudad',
+                    'ajax'      => true,
+                    'order_by'  => array('nombre', 'asc'),
+                ));    
+                
+                ...
+            }
+        }
+        
+Eso es todo. Las llamadas remotas son atendidas por un módulo especial llamado 
+_sfDependentSelectAuto_ que devuelve los valores respetando todas las opciones 
+establecidas como si de forma local se tratase.
+
+Más adelante se explican detalladamente las opciones disponibles y cómo funciona 
+el módulo automático para que lo puedas extender y devolver tus propios datos.
+
+Antes de eso, otro ejemplo.
+
+### Productos y servicios
+
+Se utilizará como ejemplo un caso de ventas de productos y servicios que 
+extienden a un ítem. Al momento de cargar el detalle de la factura, se selecciona 
+el tipo (producto o servicio) y luego se despliegan los mismos en otro select.
+
+Este ejemplo muestra cómo mezclar arrays con modelos.
+
+  * _config/doctrine/schema.yml_:
+  
+        Item:
+          columns:
+            nombre: string(45)
+            precio: float
+            tipo: string(45)
+            
+        Producto:
+          inheritance:
+            extends: Item
+            type: column_aggregation
+            keyField: tipo
+            keyValue: producto        
+            
+        Servicio:
+          inheritance:
+            extends: Item
+            type: column_aggregation
+            keyField: tipo
+            keyValue: servicio
+            
+        Factura:
+          columns:
+            numero: integer
+            fecha: date
+
+        FacturaConcepto:
+          columns:
+            factura_id: integer
+            item_id: integer
+            cantidad: float
+          relations:
+            Factura:
+              foreignAlias: Conceptos
+            Item:
+              foreignAlias: Conceptos
+              
+  * _lib/model/doctrine/Item.class.php_
+  
+        class Item extends BaseItem
+        {
+            private static $tipos = array(
+                'producto' => 'Productos',
+                'servicio' => 'Servicios',
+            );
+            
+            public static function getTipos()
+            {
+                return self::$tipos;
+            }
+        }
+        
+  * _lib/form/doctrine/FacturaConceptoForm.class.php_
+  
+        class FacturaConceptoForm extends BaseFacturaConceptoForm
+        {
+            public function configure()
+            {
+                // widgets
+                
+                $this->widgetSchema['tipo'] = new sfWidgetFormChoice(array(
+                    'choices' => Item::getTipos(),
+                ));
+                
+                // si quieres cargar los tipos con ajax, podrías haber utilizado
+                // la clase sfWidgetFormArrayDependentSelect que se explica luego
+                
+                $this->widgetSchema['item_id'] = new sfWidgetFormDoctrineDependentSelect(array(
+                    'model'   => 'Item',
+                    'depends' => 'tipo',
+                    'ajax'    => true,
+                ), array(
+                    'size'    => 5,
+                ));
+                
+                // validadores
+                
+                $this->validatorSchema['tipo'] = new sfValidatorChoice(array(
+                    'choices' => Item::getTipos(),
+                ));
+            }
+        }
+        
+Aparecerá un select en donde seleccionas el tipo, luego de seleccionarlo se 
+carga la lista de items de ese tipo.
+
+Puedes combinar arrays y modelos libremente.
+
+### Utilizando sólo arrays
+
+Veamos el ejemplo de paises y provincias pero esta vez utilizando un array como 
+fuente de datos. Para ello se utilizará el widget 
+_sfWidgetFormArrayDependentSelect_.
+
+A los datos los pondremos en una clase contenedora.
+
+  * _lib/MisDatos.class.php:_
+
+        abstract class MisDatos
+        {
+            private static $paises = array(
+                'ar' => 'Argentina',
+                'br' => 'Brasil',
+            );
+            
+            private static $provincias = array(
+                'ar' => array(
+                    'ar_bue' => 'Buenos Aires',
+                    'ar_cba' => 'Córdoba',
+                ),
+                'br' => array(
+                    'br_sp' => 'São Paulo',
+                    'br_mg' => 'Minas Gerais',
+                ),
+            );
+            
+            public static function getPaises()
+            {
+                return self::$paises;
+            }
+            
+            public static function getProvincias()
+            {
+                return self::$provincias;
+            }    
+        }
+
+  * _lib/form/doctrine/PersonaForm.class.php:_
+
+        class PersonaForm extends BasePersonaForm
+        {
+            public function configure()
+            {    
+                // widgets
+            
+                $this->widgetSchema['pais'] = new sfWidgetFormArrayDependentSelect(array(
+                    'callable' => array('MisDatos', 'getPaises'),
+                ));
+                
+                $this->widgetSchema['provincia'] = new sfWidgetFormArrayDependentSelect(array(
+                    'callable' => array('MisDatos', 'getProvincias'),
+                    'depends' => 'pais',
+                ));            
+                
+                // validadores
+                
+                $this->validatorSchema['pais'] = new sfValidatorChoice(array(
+                    'choices' => MisDatos::getPaises(),
+                ));
+                
+                $this->validatorSchema['provincia'] = new sfValidatorChoice(array(
+                    'choices' => MisDatos::getProvincias(),
+                ));
+            }
+        }
+
+También funciona hablitando ajax.
+
+Referencia de opciones
+----------------------
+
+Por widget, en negritas están las requeridas. El símbolo ">" significa que ese 
+widget extiende al otro.
+
+### sfWidgetFormDependentSelect
+
+  * _**depends** = null:_ ¿De qué otro select se depende? Puede ser el nombre 
+    del campo o bien del modelo. El widget se encargará de determinar los detalles
+    de acuerdo a este valor,
+               
+  * _add\_empty = true:_ Especifica si agrega una opción en blanco. Puede ser 
+    true, false o el texto que quieras que aperzca,
+
+  * _ajax = false:_ Especifica si se utilizan llamadas remotas para rellenar 
+    los valores del select,
+    
+  * _cache = true:_ Especifica si se utilizará la caché de valores de un select
+    una vez que ya fué cargado remotamente (para evitar peticiones extras),
+    
+  * _url = sfDependentSelectAuto/\_ajax:_ URL dónde se harás las llamadas 
+    remotas para cargar los selects. El valor no debe ser del tipo "modulo/accion" 
+    ni nombre de ruta (puede utilizar el método genUrl de sfWebController para
+    genrarla),
+    
+  * _params = array():_ Parámetros adicionales que desea enviar a la llamada
+    remota.
+    
+  * _source\_class = null:_ La clase que se utilizará como orígen de datos. 
+    (Ver más adelante en personalizando).
+  
+  * _source\_params = array():_ Parámetros enviados al orígen de datos.
+    
+### sfWidgetFormArrayDependentSelect > sfWidgetFormDependentSelect
+
+  * _**callable** = null:_ Función o método que se llamará para solicitar el 
+    array. En caso de ser un método estático, indicar: array('Clase', 'metodo').
+    No utilices instancias de clases como $this, ya que no funcionará en las 
+    llamadas remotas.
+
+  * heredadas: **depends, add_empty, ajax, cache, url, params**
+  
+### sfWidgetFormObjectDependentSelect > sfWidgetFormDependentSelect
+
+  * _**model** = null:_ Modelo que se listará en este select
+  
+  * _method = __toString:_ Método para el texto cada opción
+  
+  * _key\_method = getPrimaryKey:_ Método para el valor de cada opción
+  
+  * _ref\_method = null:_ Método de la relación con 'depends'
+  
+  * _order\_by = null:_ Órden del lista, del tipo array('columna', {'asc'|'desc'})
+
+  * heredadas: **depends, add_empty, ajax, cache, url, params**
+  
+### sfWidgetFormDoctrineDependentSelect > sfWidgetFormObjectDependentSelect
+
+  * _table\_method = null:_ Método que se llamará en la clase Table del objeto
+    para devolver los valores a mostrar.
+
+  * heredadas: **depends, add_empty, ajax, cache, url, params, model, method, 
+    key_method, ref_method, order_by**
+    
+### sfWidgetFormPropelDependentSelect > sfWidgetFormObjectDependentSelect
+
+  * _peer\_method = null:_ Método que se llamará en la clase PEER del objeto
+    para devolver los valores a mostrar.
+
+  * heredadas: **depends, add_empty, ajax, cache, url, params, model, method, 
+    key_method, ref_method, order_by**
+    
+
+Personalizando
+--------------
+
+En el caso que desees tener el control de los datos en las llamadas tanto locales 
+como remotas puedes hacerlo de varias formas.
+
+### Utilizando la opción '{table|peer}\_method'
+
+Si trabajas con un ORM, lo más fácil será especificar la opción 
+'{table|peer}\_method' en el widget y luego implementarla en la clase correspondiente.
+
+Veamos un ejemplo para devolver sólo aquellas provincias que sean productoras.
+
+  * _lib/form/doctrine/PersonaForm.class.php:_
+
+        class PersonaForm extends BasePersonaForm
+        {
+            public function configure()
+            {    
+                ...
+                
+                $this->widgetSchema['provincia'] = new sfWidgetFormDoctrineDependentSelect(array(
+                    'model'        => 'Provincia',
+                    'depends'      => 'Pais',
+                    'table_method' => 'getProductorasQuery',
+                ));            
+                
+                ...
+            }
+        }
+
+  * _lib/model/doctrine/ProvinciaTable.class:_
+
+        class ProvinciaTable extends Doctrine_Table
+        {    
+            public function getProductorasQuery($refValue)
+            {
+                return $this->createQuery('p')->where('p.es_productora = true and p.pais_id = ?', $refValue);
+            }
+        }
+
+Es importante que sepas que cuando la acción llama al método {table|peer}, se le 
+pasa como parámetro el valor de referencia, para que puedas filtrar tus datos 
+de acuerdo al valor del select del cual depende.
+
+### Creando tu propio orígen de datos o widget
+
+En el caso que quieras utilizar otra fuente de datos (por si no usas un ORM o 
+simplemente un canal RSS), puedes crear facilmente uno personalizado. De esta 
+forma podrás aprovochar la automatización de las llamadas tanto locales como 
+remotas y enlazarlas con otros selects dependientes que utilicen otros orígenes.
+
+Veamos cómo hacer para crear tu propio orgien de datos para provincias 
+productoras.
+
+  * _lib/ProvinciaProductoraSource.class.php:_
+
+        class ProvinciaProductoraSource extends sfDependentSelectObjectSource
+        {
+            // como vamos a trabajar con objetos extendemos a sfDependentSelectObjectSource
+            // en tu caso puedes extender directamente a sfDependentSelectSource
+            
+            public function getObjects($fk = null)
+            {
+                return ProvinciaTable::getInstance()->createQuery('p')
+                    ->where('p.es_productora = true and p.pais_id = ?', $fk)
+                    ->execute();
+            }
+            
+            public function getObject($pk)
+            {
+                // este método se utiliza para la reconstrucción de la cadena de 
+                // selects como se explica más adelante. de momento sólo preocuparnos
+                // en devolver el objeto que corresponde con el parametro $pk
+                
+                return ProvinciaTable::getInstance()->find($pk);
+            }
+        }
+
+  * _lib/form/doctrine/PersonaForm.class.php:_
+
+        class PersonaForm extends BasePersonaForm
+        {
+            public function configure()
+            {    
+                ...
+                
+                // nota que cuando utilizas tu propia fuente de datos tienes que
+                // utilizar el widget sfWidgetFormDependentSelect
+                
+                $this->widgetSchema['provincia'] = new sfWidgetFormDependentSelect(array(
+                    'depends'      => 'Pais',
+                    'source_class' => 'ProvinciaProductoraSource',
+                    // tambien puedes enviarle parametros al source
+                    #'source_params'=> array('excepto' => 'Santa Fé'),
+                ));
+                
+                ...
+            }
+        }
+
+En este ejemplo hemos extendido a _sfDependentSelectObjectSource_ que facilita 
+el trabajo con objetos, pero si por ejemplo quieres crear una fuente RSS puedes 
+basarte en cómo lo hace _sfWidgetFormArrayDependentSelect_.
+
+También puedes crear tu propio widget para que utilice siempre este orígen o bien
+añadirle otra funcionalidad, revisa las clases sfDependentSelectSource 
+y sfWidgetFormDependentSelect para conocer como crear las tuyas.
+
+### Extendiendo tu módulo
+
+Otra forma es extender tu módulo a _sfActionsDependentSelect_ y definir 
+métodos de la forma getValuesFor{name} y getRefValueFor{name}. No olvides 
+especificar tu acción en la opción 'url' del widget.
+
+Veamos en el ejemplo de paises, si quisiéramos devolver las provincias de esta
+forma.
+
+  * _apps/tuapp/modules/tumodulo/actions/actions.class.php:_
+
+        class tuModuloActions extends sfActionsDependentSelect
+        {
+            protected function getValuesForPersonaProvincia($request, $source)
+            {
+                // en este caso trabajamos con objetos, pero puedes hacerlo de cualquier
+                // forma siempre y cuando devuelvas un array con los id como clave
+                // y los textos como valores del array.
+                
+                $valores = array();
+                $provincias = ProvinciaTable::getInstance()->createQuery('p')
+                    ->where('p.pais_id = ? and p.es_productora = true')
+                    ->execute($request->getParameter('_ds_ref'));
+                
+                // el parámetro _ds_ref contiene el valor del select del cual depende
+                // en este caso sería el valor de pais.id
+                
+                foreach ($provincias as $provincia) {
+                    $valores[$provincia->getId()] = $provincia->getNombre();
+                }
+                
+                return $valores;
+            }
+            
+            protected function getRefValueForPersonaProvincia($request, $source)
+            {
+                // este método se utiliza para "reconstruir" la cadena de selects
+                // dependientes desde el orden inverso. es decir, si sólo se tiene
+                // el valor de provincia, tenemos que saber de qué pais es para
+                // seleccionarlo en el select de paises.
+                // en este caso el valor de _ds_ref es el valor actual del select
+                // de provincias (provincia.id) y debemos devolver a qué país 
+                // corresponde (provincia.pais_id)
+                
+                $provincia = ProvinciaTable::getInstance()->find($request->getParameter('_ds_ref'));
+                return $provincia->getPaisId();
+            }
+        }    
+
+Nota que cada método también recibe como parámetro la fuente de datos por si 
+te es necesario.
+
+Puedes revisar la clase _sfActionsDependentSelect_ para conocer más sobre cómo 
+extender la funcionalidad en tu módulo.
+
+Si no puedes extender tu módulo a la clase antes mencionada y definitivamente 
+ninguna de las formas ofrecidas satisfacen tus necesidades, deberás implementar 
+una acción en tu módulo que contenga toda la funcionalidad como la acción '\_ajax'
+lo hace en la clase sfActionsDependentSelect. Con Firebug puedes ver los 
+parámetros enviados vía POST.
+
+
+Sobre el código javascript
+--------------------------
+
+Por defecto se incluye en el plugin dos versiones del script, normal y minimizado.
+Siempre se cargará el minimizado a menos que cambies tu configuración:
+
+  * _apps/tuapp/config/app.yml:_
+
+        dev:
+          app:
+            ...
+            sfDependentSelectPlugin:
+              js: normal
+
+También puedes establecer 'false' para que no se cargue el script. El valor para
+mostrarlo minimizado es 'minimized'.
+
+
+¿Sugerencias?
+-------------
+
+Desgraciadamente no hablo inglés y he elaborado la mayor parte del código 
+tratando de usar terminología en ese idioma con ayuda de traductores automáticos.
+Pido disculpas por incoherencias encontradas y agradecería me informen para 
+poder corregirlas.
+
+Me pueden escribir a mi correo personal por cualquier sugerencia o duda. Con 
+mucho gusto estaré dispuesto a mejorar los aspectos que me indiquen.
+
+
+Agradecimientos
+---------------
+
+A [TRADUCTORES] por ofrecerse tan amablemente a corregir y traducir la 
+documentación y a todos los miembros de la lista de symfony-es por formar 
+esta gran comunidad.
+
+
+TODO
+----
+
+  * Traducir documentación a inglés
+  * Probar funcionamiento en symfony 1.1 y 1.2
