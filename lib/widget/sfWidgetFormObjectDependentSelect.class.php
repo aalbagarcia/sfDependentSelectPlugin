@@ -32,7 +32,7 @@ abstract class sfWidgetFormObjectDependentSelect extends sfWidgetFormDependentSe
     {
         $this->addRequiredOption('model');
         $this->addOption('method', '__toString');
-        $this->addOption('key_method', 'getPrimaryKey');
+        $this->addOption('key_method', 'getId');
         $this->addOption('ref_method', '');        
         $this->addOption('order_by', '');
         
