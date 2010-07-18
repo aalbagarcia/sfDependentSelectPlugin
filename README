@@ -155,6 +155,10 @@ A continuación, la solución. Se hará con una persona que vive en una ciudad.
                     'add_empty' => 'Seleccione ciudad',
                 ));    
                 
+                // siempre el orden de los selects tienen que ser según la dependencia.
+                // es decir, primero pais > provincia > ciudad
+                $this->widgetSchema->moveField('ciudad_id', 'after', 'provincia_id');
+                
                 // validadores
                 
                 $this->validatorSchema['pais_id'] = new sfValidatorDoctrineChoice(array(
@@ -218,7 +222,7 @@ para añadir esta característica facilmente.
                     // están disponibles las mismas que sfWidgetForm{Doctrine|Propel}Choice
                     'order_by'      => array('nombre', 'asc'),
                     #'method'       => '__toString',
-                    #'key_method'   => 'getPrimaryKey',
+                    #'key_method'   => 'getId',
                     #'table_method' => 'getPaisesEuropeos',
                 ));
                 
