@@ -107,40 +107,37 @@ SelectDependiente.prototype.buscarGrupoDesdeValor = function(valorBuscado)
 {
     var grupoBuscado = undefined;
 
-    if (typeof this.dependiente === 'object')
+    if (typeof this.dependiente === 'object' && this.ajax === true)
     {
-        if (this.ajax === true)
+        this.params[this.varsoloref] = true;
+        this.params[this.varref] = valorBuscado;
+        
+        jQuery.ajax(
         {
-            this.params[this.varsoloref] = true;
-            this.params[this.varref] = valorBuscado;
-            
-            jQuery.ajax(
+            url:      this.url,
+            data:     this.params,
+            type:     'POST',
+            async:    false,
+            dataType: 'json',
+            context:  this,
+            success:  function(data)
             {
-                url:      this.url,
-                data:     this.params,
-                type:     'POST',
-                async:    false,
-                dataType: 'json',
-                context:  this,
-                success:  function(data)
+                if (typeof data !== 'undefined')
                 {
-                    if (typeof data !== 'undefined')
-                    {
-                        grupoBuscado = data;
-                    }
+                    grupoBuscado = data;
                 }
-            });         
-        }
-        else
+            }
+        });         
+    }
+    else
+    {
+        for (var grupo in this.opciones) 
         {
-            for (var grupo in this.opciones) 
+            for (var valor in this.opciones[grupo]) 
             {
-                for (var valor in this.opciones[grupo]) 
+                if (valor == valorBuscado) 
                 {
-                    if (valor == valorBuscado) 
-                    {
-                        grupoBuscado = grupo;
-                    }
+                    grupoBuscado = grupo;
                 }
             }
         }
