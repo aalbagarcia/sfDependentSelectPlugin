@@ -10,9 +10,9 @@
   <email>sercba@gmail.com</email>
   <active>yes</active>
  </lead>
- <date>2010-07-18</date>
+ <date>2010-07-19</date>
  <version>
-   <release>0.1.1</release>
+   <release>0.1.2</release>
    <api>0.1.0</api>
  </version>
  <stability>
@@ -86,6 +86,23 @@
  </phprelease>
 
  <changelog>
+
+   <release>
+     <version>
+       <release>0.1.2</release>
+       <api>0.1.0</api>
+     </version>
+     <stability>
+       <release>alpha</release>
+       <api>alpha</api>
+     </stability>
+     <license uri="http://www.symfony-project.org/plugins/sfDependentSelectPlugin">MIT license</license>
+     <date>2010-07-19</date>
+     <license>MIT</license>
+     <notes>
+       * sercba: Bugfixes in sfDependentSelectPropelSource and sfWidgetFormPropelDependentSelect
+     </notes>
+   </release>
  
    <release>
      <version>

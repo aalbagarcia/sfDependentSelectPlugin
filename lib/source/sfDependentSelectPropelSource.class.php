@@ -40,7 +40,7 @@ class sfDependentSelectPropelSource extends sfDependentSelectObjectSource
         $class = constant($this->_model.'::PEER');
         $criteria = new Criteria();
         $colName = call_user_func(array($class, 'translateFieldName'), substr($this->_valueMethod, 3), BasePeer::TYPE_PHPNAME, BasePeer::TYPE_COLNAME);
-        $criteria->add($colName, $valorBuscado);
+        $criteria->add($colName, $pk);
         return call_user_func(array($class, 'doSelectOne'), $criteria);        
     } 
 }

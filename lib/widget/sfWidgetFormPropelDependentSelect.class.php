@@ -45,7 +45,7 @@ class sfWidgetFormPropelDependentSelect extends sfWidgetFormObjectDependentSelec
      */
     protected function configure($options = array(), $attributes = array())
     {
-        $this->addOption('peer_method', null);
+        $this->addOption('peer_method', 'doSelect');
         
         parent::configure($options, $attributes);        
     }
