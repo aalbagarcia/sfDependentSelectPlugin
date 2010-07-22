@@ -35,7 +35,7 @@ var SelectDependiente = function(config)
 
     this.grupo       = '';
     this.limpio      = false;
-    this.cambio      = function(valor){};
+    this.fnsCambio   = [];
     this.select      = document.getElementById(this.id);
     
     this.iniciar();
@@ -62,10 +62,10 @@ SelectDependiente.prototype.iniciar = function()
     
     if (typeof this.dependiente === 'object') 
     {
-        this.dependiente.cambio = function(valor) 
+        this.dependiente.agregarFnCambio(function(valor) 
         {
             self.mostrar(valor);
-        }
+        });
     }
 
     var mostrarHtml = false;
@@ -82,6 +82,19 @@ SelectDependiente.prototype.iniciar = function()
     if (mostrarHtml === true)
     {
         this.mostrar('html');
+    }
+};
+
+SelectDependiente.prototype.agregarFnCambio = function(fn)
+{
+    this.fnsCambio.push(fn);
+};
+
+SelectDependiente.prototype.cambio = function(valor)
+{
+    for (var fn in this.fnsCambio)
+    {
+        this.fnsCambio[fn](valor);
     }
 };
 
