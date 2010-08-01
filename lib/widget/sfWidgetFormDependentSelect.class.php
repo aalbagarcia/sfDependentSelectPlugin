@@ -94,9 +94,9 @@ class sfWidgetFormDependentSelect extends sfWidgetForm
         $jsConfig = json_encode($config);
         $jsVar = $this->generateJavascriptVar($name);
         $jsGroup = '';
-        if (strlen($value)) {
+        if (strlen($value) && ! $group) {
             $jsGroup = $source->getRefValue($value);
-        } elseif ( ! $this->getOption('depends') && $group) {
+        } elseif ( ! $this->getOption('depends')) {
             $jsGroup = $group;
         }
         if (strlen($jsGroup)) {
