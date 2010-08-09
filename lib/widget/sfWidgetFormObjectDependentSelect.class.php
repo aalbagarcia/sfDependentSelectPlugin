@@ -72,11 +72,14 @@ abstract class sfWidgetFormObjectDependentSelect extends sfWidgetFormDependentSe
     
     protected function generateJavascriptVar($baseName, $var = null)
     {
-        if ( ! is_null($var) && $this->isModel($this->getOption('depends'))) {
-            $var .= '_id';
+        if ($this->isModel($this->getOption('depends'))) {
+          $var = $this->getOption('ref_method');
+          if (substr($var, 0, 3) === 'get') {
+            $var = substr($var, 3);
+          }
         }
 
-        return parent::generateJavascriptVar($baseName, $var);    
+        return parent::generateJavascriptVar($baseName, $var);  
     }
     
     protected function isModel($str)

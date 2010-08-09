@@ -9,28 +9,35 @@
  */ 
 var SelectDependiente = function(config)
 {
+    if (this.instancias[config.id] instanceof SelectDependiente)
+    {
+        return this.instancias[config.id];
+    }
+
+    this.instancias[config.id] = this;
+
     defecto = 
     {
         id:          '',
         opciones:    {},
         dependiente: '',
-        vacio:       false, 
-        ajax:        false, 
-        cache:       true, 
-        url:         '', 
+        vacio:       false,
+        ajax:        false,
+        cache:       true,
+        url:         '',
         params:      {},
         varref:      '_ref',
         varsoloref:  '_solo_ref'
     };
 
-    for (var item in defecto) 
+    for (var item in defecto)
     {
         this[item] = typeof config[item] === 'undefined' ? defecto[item] : config[item];
     }
 
     if (typeof this.dependiente === 'string' && this.dependiente.length > 0)
     {
-        eval("this.dependiente = typeof " + this.dependiente + " === 'undefined' ? new SelectDependiente({ 'id': '" + this.dependiente + "' }) : " + this.dependiente + ";");
+        this.dependiente = new SelectDependiente({ id: this.dependiente });
     }
 
     this.grupo       = '';
@@ -42,6 +49,8 @@ var SelectDependiente = function(config)
     
     return this;
 };
+
+SelectDependiente.prototype.instancias = [];
 
 SelectDependiente.prototype.iniciar = function()
 {
@@ -76,7 +85,14 @@ SelectDependiente.prototype.iniciar = function()
         {
             this.opciones.html = {};
         }
-        this.opciones['html'][opt.value] = opt.text;
+        if (opt.value == '')
+        {
+            this.vacio = opt.text;
+        }
+        else
+        {
+            this.opciones['html'][opt.value] = opt.text;
+        }
         mostrarHtml = true;
     }
     if (mostrarHtml === true)
