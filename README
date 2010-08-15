@@ -4,24 +4,24 @@ sfDependentSelectPlugin
 Un plugin para enlazar selects de una forma simple y elegante
 
     $this->widgetSchema['pais_id'] = new sfWidgetFormDoctrineChoice(array(
-        'model'   => 'Pais'
+        'model'   => 'Pais',
     ));
     $this->widgetSchema['provincia_id'] = new sfWidgetFormDoctrineDependentSelect(array(
         'model'   => 'Provincia', 
-        'depends' => 'Pais'
+        'depends' => 'Pais',
     ));
     
 **Nota:** Documentación original en español disponible en doc/README_es.
 
 
 Características
----------------
+===============
 
   * Modo estático y modo AJAX con módulo automático (respetando add\_empty, 
     {peer|table}\_method, order\_by, etc),
     
   * Permite enlazar listas de array con listas de modelos o entre modelos 
-    (**niveles ilimitados**),
+    (niveles ilimitados) y también que dos selects dependan de uno,
     
   * Soporte para Doctrine y Propel,
   
@@ -29,7 +29,7 @@ Características
 
 
 Instalación
------------
+===========
 
   * Instalar el plugin
   
@@ -58,40 +58,46 @@ Instalación
 
 
 Dependencias
-------------
+============
 
   * _jQuery:_ solamente si utilizas AJAX. Debes agregarla tú en caso necesites 
-    esta funcionalidad.
+    esta funcionalidad. **Importante**: La versión de jQuery debe ser igual o 
+    mayor a 1.4.
 
 
 Contenido
----------
+=========
 
-### Widgets
+Widgets
+-------
 
   * _sfWidgetFormArrayDependentSelect:_ despliega un select utilizando como 
     fuente de datos un array,
   * _sfWidgetFormDoctrineDependentSelect:_ utiliza Doctrine como fuente de datos,
   * _sfWidgetFormPropelDependentSelect:_ utiliza Propel como fuente de datos.
 
-### Actions
+Actions
+-------
 
   * _sfActionsDependentSelect:_ implementa una acción "_ajax" que devuelve los 
     valores necesarios para cada petición.
 
-### Modules
+Modules
+-------
 
   * _sfDependentSelectAuto:_ es el módulo utilizado por defecto por los widgets, 
     simplemente extiende a _sfActionsDependentSelect_.
 
 
 Ejemplos de uso
----------------
+===============
 
 Los ejemplos son para Doctrine, pero puedes hacerlo de igual forma para propel 
 utilizando la clase _sfWidgetFormPropelDependentSelect_.
 
-### Pais, provincia y ciudad
+
+Pais, provincia y ciudad
+------------------------
 
 Típico caso en que se tiene paises, provincias y ciudades relacionadas. Al 
 momento de crear una dependencia a la ciudad desde otra entidad, se crea un gran 
@@ -186,7 +192,8 @@ Cuando los niveles son profundos y con grandes cantidades de opciones, seguramen
 querrás utilizar AJAX. A continuación veremos cómo modificar el ejemplo anterior 
 para añadir esta característica facilmente.
 
-#### Ahora con AJAX
+
+### Ahora con AJAX
 
 **Importante:** Recuerda cargar jQuery sino no se harán las llamadas remotas.
 
@@ -247,7 +254,9 @@ el módulo automático para que lo puedas extender y devolver tus propios datos.
 
 Antes de eso, otro ejemplo.
 
-### Productos y servicios
+
+Productos y servicios
+---------------------
 
 Se utilizará como ejemplo un caso de ventas de productos y servicios que 
 extienden a un ítem. Al momento de cargar el detalle de la factura, se selecciona 
@@ -344,7 +353,9 @@ carga la lista de items de ese tipo.
 
 Puedes combinar arrays y modelos libremente.
 
-### Utilizando sólo arrays
+
+Utilizando sólo arrays
+----------------------
 
 Veamos el ejemplo de paises y provincias pero esta vez utilizando un array como 
 fuente de datos. Para ello se utilizará el widget 
@@ -414,13 +425,16 @@ A los datos los pondremos en una clase contenedora.
 
 También funciona hablitando ajax.
 
+
 Referencia de opciones
-----------------------
+======================
 
 Por widget, en negritas están las requeridas. El símbolo ">" significa que ese 
 widget extiende al otro.
 
-### sfWidgetFormDependentSelect
+
+sfWidgetFormDependentSelect
+---------------------------
 
   * _**depends** = null:_ ¿De qué otro select se depende? Puede ser el nombre 
     del campo o bien del modelo. El widget se encargará de determinar los detalles
@@ -447,8 +461,10 @@ widget extiende al otro.
     (Ver más adelante en personalizando).
   
   * _source\_params = array():_ Parámetros enviados al orígen de datos.
+
     
-### sfWidgetFormArrayDependentSelect > sfWidgetFormDependentSelect
+sfWidgetFormArrayDependentSelect > sfWidgetFormDependentSelect
+--------------------------------------------------------------
 
   * _**callable** = null:_ Función o método que se llamará para solicitar el 
     array. En caso de ser un método estático, indicar: array('Clase', 'metodo').
@@ -456,32 +472,38 @@ widget extiende al otro.
     llamadas remotas.
 
   * heredadas: **depends, add_empty, ajax, cache, url, params**
+
   
-### sfWidgetFormObjectDependentSelect > sfWidgetFormDependentSelect
+sfWidgetFormObjectDependentSelect > sfWidgetFormDependentSelect
+---------------------------------------------------------------
 
   * _**model** = null:_ Modelo que se listará en este select
   
   * _method = __toString:_ Método para el texto cada opción
   
-  * _key\_method = getPrimaryKey:_ Método para el valor de cada opción
+  * _key\_method = getId:_ Método para el valor de cada opción
   
   * _ref\_method = null:_ Método de la relación con 'depends'
   
   * _order\_by = null:_ Órden del lista, del tipo array('columna', {'asc'|'desc'})
 
   * heredadas: **depends, add_empty, ajax, cache, url, params**
+
   
-### sfWidgetFormDoctrineDependentSelect > sfWidgetFormObjectDependentSelect
+sfWidgetFormDoctrineDependentSelect > sfWidgetFormObjectDependentSelect
+-----------------------------------------------------------------------
 
   * _table\_method = null:_ Método que se llamará en la clase Table del objeto
     para devolver los valores a mostrar.
 
   * heredadas: **depends, add_empty, ajax, cache, url, params, model, method, 
     key_method, ref_method, order_by**
-    
-### sfWidgetFormPropelDependentSelect > sfWidgetFormObjectDependentSelect
 
-  * _peer\_method = null:_ Método que se llamará en la clase PEER del objeto
+    
+sfWidgetFormPropelDependentSelect > sfWidgetFormObjectDependentSelect
+---------------------------------------------------------------------
+
+  * _peer\_method = doSelect:_ Método que se llamará en la clase PEER del objeto
     para devolver los valores a mostrar.
 
   * heredadas: **depends, add_empty, ajax, cache, url, params, model, method, 
@@ -489,12 +511,14 @@ widget extiende al otro.
     
 
 Personalizando
---------------
+==============
 
 En el caso que desees tener el control de los datos en las llamadas tanto locales 
 como remotas puedes hacerlo de varias formas.
 
-### Utilizando la opción '{table|peer}\_method'
+
+Utilizando la opción '{table|peer}\_method'
+-------------------------------------------
 
 Si trabajas con un ORM, lo más fácil será especificar la opción 
 '{table|peer}\_method' en el widget y luego implementarla en la clase correspondiente.
@@ -533,7 +557,9 @@ Es importante que sepas que cuando la acción llama al método {table|peer}, se 
 pasa como parámetro el valor de referencia, para que puedas filtrar tus datos 
 de acuerdo al valor del select del cual depende.
 
-### Creando tu propio orígen de datos o widget
+
+Creando tu propio orígen de datos o widget
+------------------------------------------
 
 En el caso que quieras utilizar otra fuente de datos (por si no usas un ORM o 
 simplemente un canal RSS), puedes crear facilmente uno personalizado. De esta 
@@ -597,7 +623,9 @@ También puedes crear tu propio widget para que utilice siempre este orígen o b
 añadirle otra funcionalidad, revisa las clases sfDependentSelectSource 
 y sfWidgetFormDependentSelect para conocer como crear las tuyas.
 
-### Extendiendo tu módulo
+
+Extendiendo tu módulo
+---------------------
 
 Otra forma es extender tu módulo a _sfActionsDependentSelect_ y definir 
 métodos de la forma getValuesFor{name} y getRefValueFor{name}. No olvides 
@@ -660,7 +688,7 @@ parámetros enviados vía POST.
 
 
 Sobre el código javascript
---------------------------
+==========================
 
 Por defecto se incluye en el plugin dos versiones del script, normal y minimizado.
 Siempre se cargará el minimizado a menos que cambies tu configuración:
@@ -678,7 +706,7 @@ mostrarlo minimizado es 'minimized'.
 
 
 ¿Sugerencias?
--------------
+=============
 
 Desgraciadamente no hablo inglés y he elaborado la mayor parte del código 
 tratando de usar terminología en ese idioma con ayuda de traductores automáticos.
@@ -690,7 +718,7 @@ mucho gusto estaré dispuesto a mejorar los aspectos que me indiquen.
 
 
 Agradecimientos
----------------
+===============
 
 A [TRADUCTORES] por ofrecerse tan amablemente a corregir y traducir la 
 documentación y a todos los miembros de la lista de symfony-es por formar 
