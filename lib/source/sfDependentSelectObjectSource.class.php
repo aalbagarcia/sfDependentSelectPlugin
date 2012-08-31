@@ -36,11 +36,11 @@ abstract class sfDependentSelectObjectSource extends sfDependentSelectSource
 
         if ($refValue || ! $groupMethod) {
             foreach ($objects as $object) {
-              $values[$object->$keyMethod()] = $object->$method();
+              $values[$object->$keyMethod()] = (string) $object->$method();
             }         
         } else {
             foreach ($objects as $object) {
-              $values[$object->$groupMethod()][$object->$keyMethod()] = $object->$method();
+              $values[$object->$groupMethod()][$object->$keyMethod()] = (string) $object->$method();
             }           
         }
 
