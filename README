@@ -10,9 +10,6 @@ Un plugin para enlazar selects de una forma simple y elegante
         'model'   => 'Provincia', 
         'depends' => 'Pais',
     ));
-    
-**Nota:** Documentación original en español disponible en doc/README_es.
-
 
 Características
 ===============
@@ -462,6 +459,9 @@ sfWidgetFormDependentSelect
   
   * _source\_params = array():_ Parámetros enviados al orígen de datos.
 
+  * _force\_group = null:_ Indica el grupo de valores que debe mostrarse por
+    defecto al cargar la página.
+
     
 sfWidgetFormArrayDependentSelect > sfWidgetFormDependentSelect
 --------------------------------------------------------------
@@ -470,6 +470,9 @@ sfWidgetFormArrayDependentSelect > sfWidgetFormDependentSelect
     array. En caso de ser un método estático, indicar: array('Clase', 'metodo').
     No utilices instancias de clases como $this, ya que no funcionará en las 
     llamadas remotas.
+
+  * _callable\_params = null:_ Parametros que se le pasarán a la función o
+    método indicado en la opción "callable".
 
   * heredadas: **depends, add_empty, ajax, cache, url, params**
 

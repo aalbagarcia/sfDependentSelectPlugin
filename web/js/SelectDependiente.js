@@ -37,7 +37,7 @@ var SelectDependiente = function(config)
 
     if (typeof this.dependiente === 'string' && this.dependiente.length > 0)
     {
-        this.dependiente = new SelectDependiente({ id: this.dependiente });
+        this.dependiente = new SelectDependiente({id: this.dependiente});
     }
 
     this.grupo       = '';
@@ -270,6 +270,16 @@ SelectDependiente.prototype.mostrar = function(grupo, forzar)
     this.select.disabled = false;
     
     return this;
+};
+
+SelectDependiente.prototype.mostrarDependiente = function(grupo, forzar)
+{
+    this.mostrar(grupo, forzar)
+    if (typeof this.dependiente === 'object')
+    {
+        this.dependiente.mostrar(this.dependiente.buscarGrupoDesdeValor(grupo), true);
+        this.dependiente.seleccionar(grupo, true);
+    }
 };
 
 SelectDependiente.prototype.seleccionar = function(valor, forzar)
