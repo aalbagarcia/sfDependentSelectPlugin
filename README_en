@@ -1,0 +1,719 @@
+sfDependentSelectPlugin
+=======================
+
+A linking selects plugin, in a simple and elegant way
+
+    $this->widgetSchema['country_id'] = new sfWidgetFormDoctrineChoice(array(
+        'model'   => 'Country',
+    ));
+    $this->widgetSchema['state_id'] = new sfWidgetFormDoctrineDependentSelect(array(
+        'model'   => 'State', 
+        'depends' => 'Country',
+    ));
+    
+**Note:** Original document in Spanish available on /README.
+
+
+Features
+========
+
+  * Static mode and AJAX mode with automatic module (respect add\_empty, 
+    {peer|table}\_method, order\_by, etc),    
+    
+  * Allows linking of array lists with models list or between models 
+    (unlimited levels),
+    
+  * Doctrine and Propel support,
+  
+  * Easy to customize and extend.
+
+
+Instalation
+===========
+
+  * Install the plugin
+  
+        $ php symfony plugin:install sfDependentSelectPlugin
+        
+  * Publish javascript
+  
+        $ php symfony plugin:publish-assets
+    
+  * Clean the cache
+  
+        $ php symfony cache:clear
+    
+  * Enable the plugin in the project settings 
+    _(config/ProjectConfiguration.class.php)_
+  
+        $this->enablePlugins(..., 'sfDependentSelectPlugin');
+    
+  * Enable the module *sfDependentSelectAuto* if you want to use automated 
+    ajax _(apps/{yourapp}/config/settings.yml)_
+  
+        all:
+          .settings:
+            ...        
+            enabled_modules:        [sfDependentSelectAuto]
+
+
+Dependencies
+============
+
+  * _jQuery_: using AJAX only. Must add by yourself in case you need this 
+    functionality. Version >= 1.4.
+
+
+Content
+=======
+
+Widgets
+-------
+
+  * _sfWidgetFormArrayDependentSelect:_ displays a select using an array as a 
+    database,
+  * _sfWidgetFormDoctrineDependentSelect:_ uses Doctrine as a database,
+  * _sfWidgetFormPropelDependentSelect:_ uses Propel as a database.
+
+Actions
+-------
+
+  * _sfActionsDependentSelect:_ implements an "_ajax" action that returns the 
+    values required for each request.
+
+Modules
+-------
+
+  * _sfDependentSelectAuto:_ is the default module used by widgets, 
+    simply extends to _sfActionsDependentSelect_.
+
+
+Using examples
+==============
+
+The examples are for Doctrine, but you can do it the same way for propel 
+using the _sfWidgetFormPropelDependentSelect_ class.
+
+
+Country, state, city
+--------------------
+
+A typical case where you have countries, states and cities related. When 
+creating a dependency on the city from another entity, it creates a big problem 
+when displaying the form, and displays all the cities of all provinces in all 
+countries mixed.
+
+Next, the solution. Be done with a person living in a city.
+
+  * _config/doctrine/schema.yml_:
+  
+        Country:
+          columns:
+            name: string(45)
+            
+        State:
+          columns:
+            country_id: integer
+            name: string(45)
+          relations:
+            Pais:
+              foreignAlias: States
+              
+        City:
+          columns:
+            state_id: integer
+            name: string(45)
+          relations:
+            Provincia:
+              foreignAlias: Cities
+              
+        Person:
+          columns:
+            city_id: integer
+            name: string(45)
+          relations:
+            Ciudad:
+              foreignAlias: People
+
+  * _lib/form/doctrine/PersonaForm.class.php_:
+  
+        class PersonForm extends BasePersonForm
+        {
+            public function configure()
+            {
+                // widgets
+            
+                $this->widgetSchema['country_id'] = new sfWidgetFormDoctrineChoice(array(
+                    'model'     => 'Country',
+                    'add_empty' => 'Select country',
+                ));
+                
+                $this->widgetSchema['state_id'] = new sfWidgetFormDoctrineDependentSelect(array(
+                    'model'     => 'State', 
+                    'depends'   => 'Country',
+                    'add_empty' => 'Select state',
+                ));
+                
+                $this->widgetSchema['city_id'] = new sfWidgetFormDoctrineDependentSelect(array(
+                    'model'     => 'City', 
+                    'depends'   => 'State',
+                    'add_empty' => 'Select city',
+                ));    
+                
+                // always the selects order has to be according to the dependency.
+                // ich means: country > state > city
+                $this->widgetSchema->moveField('city_id', 'after', 'state_id');
+                
+                // validators
+                
+                $this->validatorSchema['country_id'] = new sfValidatorDoctrineChoice(array(
+                    'model' => 'Country',
+                ));
+                
+                $this->validatorSchema['state_id'] = new sfValidatorDoctrineChoice(array(
+                    'model' => 'State',
+                ));          
+                
+                // the 'ciudad_id' validator is in BasePersonaForm    
+            }
+        }
+        
+Ok, it should work with that. It displays select "independent" for countries, 
+according to the value of the provinces it will be shown. Likewise for the 
+cities by province.
+  
+Note that the above example does not remote calls (AJAX), just load the selects 
+with the different datasets and is showing according to the settings in which 
+select depends. So you'll notice the speed in the operation, ideal for 
+small / medium datasets.
+
+When levels are deep and large quantities of choices, you might want to use AJAX. 
+Next is how to modify the previous example to easily add this feature.
+
+
+### Now with AJAX
+
+**Important:** Remember load jQuery or remote calls wont be done.
+
+  * _lib/form/doctrine/PersonForm.class.php_:
+  
+        class PersonForm extends BasePersonForm
+        {
+            public function configure()
+            {
+                // widgets
+            
+                $this->widgetSchema['country_id'] = new sfWidgetFormDoctrineDependentSelect(array(
+                    'model'     => 'Country',
+                    'add_empty' => 'Select country',
+                    'ajax'      => true,
+                ));
+                
+                // if you want to load without ajax (because few data):
+                #$this->widgetSchema['country_id'] = new sfWidgetFormDoctrineChoice(array(
+                #    'model'     => 'Country', 
+                #    'add_empty' => 'Select country',
+                #));                 
+                
+                $this->widgetSchema['state_id'] = new sfWidgetFormDoctrineDependentSelect(array(
+                    'model'        => 'State', 
+                    'depends'      => 'Country',
+                    'add_empty'    => 'Select state',
+                    'ajax'         => true,
+                    // took the opportunity to show other options
+                    #'ref_method'   => 'getPaisId',
+                    #'url'          =>  sfContext::getInstance()->getController()->genUrl('sfDependentSelectAuto/_ajax'),
+                    #'cache'        => true,
+                    // the same of sfWidgetForm{Doctrine|Propel}Choice are available
+                    'order_by'      => array('name', 'asc'),
+                    #'method'       => '__toString',
+                    #'key_method'   => 'getId',
+                    #'table_method' => 'getBigCountries',
+                ));
+                
+                $this->widgetSchema['city_id'] = new sfWidgetFormDoctrineDependentSelect(array(
+                    'model'     => 'City', 
+                    'depends'   => 'State',
+                    'add_empty' => 'Select city',
+                    'ajax'      => true,
+                    'order_by'  => array('name', 'asc'),
+                ));    
+                
+                ...
+            }
+        }
+        
+That´s all. Remote calls are handled by a special module called 
+sfDependentSelectAuto that returns the values respecting all the options set as 
+if it were locally.
+
+Below are explained in detail the options available and how the automatic 
+module works so you can extend and return your own data.
+
+Before the explanation. Another example.
+
+
+Products and services
+---------------------
+
+Be used as an example a case of sales of products and services that extend to 
+an item. When loading the details of the invoice, select the type (product or 
+service) and then display them in another select.
+
+This example shows how to merge with arrays.
+
+  * _config/doctrine/schema.yml_:
+  
+        Item:
+          columns:
+            nombre: string(45)
+            precio: float
+            tipo: string(45)
+            
+        Producto:
+          inheritance:
+            extends: Item
+            type: column_aggregation
+            keyField: tipo
+            keyValue: producto        
+            
+        Servicio:
+          inheritance:
+            extends: Item
+            type: column_aggregation
+            keyField: tipo
+            keyValue: servicio
+            
+        Factura:
+          columns:
+            numero: integer
+            fecha: date
+
+        FacturaConcepto:
+          columns:
+            factura_id: integer
+            item_id: integer
+            cantidad: float
+          relations:
+            Factura:
+              foreignAlias: Conceptos
+            Item:
+              foreignAlias: Conceptos
+              
+  * _lib/model/doctrine/Item.class.php_
+  
+        class Item extends BaseItem
+        {
+            private static $tipos = array(
+                'producto' => 'Productos',
+                'servicio' => 'Servicios',
+            );
+            
+            public static function getTipos()
+            {
+                return self::$tipos;
+            }
+        }
+        
+  * _lib/form/doctrine/FacturaConceptoForm.class.php_
+  
+        class FacturaConceptoForm extends BaseFacturaConceptoForm
+        {
+            public function configure()
+            {
+                // widgets
+                
+                $this->widgetSchema['tipo'] = new sfWidgetFormChoice(array(
+                    'choices' => Item::getTipos(),
+                ));
+                
+                // if you want to load types with ajax, could use
+                // the  sfWidgetFormArrayDependentSelect class, that´s explained later
+                
+                $this->widgetSchema['item_id'] = new sfWidgetFormDoctrineDependentSelect(array(
+                    'model'   => 'Item',
+                    'depends' => 'tipo',
+                    'ajax'    => true,
+                ), array(
+                    'size'    => 5,
+                ));
+                
+                // validators
+                
+                $this->validatorSchema['tipo'] = new sfValidatorChoice(array(
+                    'choices' => Item::getTipos(),
+                ));
+            }
+        }
+        
+Select will appear where you select the type, when you select it will load 
+the list of items of that type.
+
+You can freely merge models and arrays.
+
+
+Using arrays only
+-----------------
+
+Take the example of countries and provinces, but this time using an array as 
+a data source. We will use the widget _sfWidgetFormArrayDependentSelect_.
+
+We will put data in a wrapper class.
+
+  * _lib/MisDatos.class.php:_
+
+        abstract class MisDatos
+        {
+            private static $paises = array(
+                'ar' => 'Argentina',
+                'br' => 'Brasil',
+            );
+            
+            private static $provincias = array(
+                'ar' => array(
+                    'ar_bue' => 'Buenos Aires',
+                    'ar_cba' => 'Córdoba',
+                ),
+                'br' => array(
+                    'br_sp' => 'São Paulo',
+                    'br_mg' => 'Minas Gerais',
+                ),
+            );
+            
+            public static function getPaises()
+            {
+                return self::$paises;
+            }
+            
+            public static function getProvincias()
+            {
+                return self::$provincias;
+            }    
+        }
+
+  * _lib/form/doctrine/PersonaForm.class.php:_
+
+        class PersonaForm extends BasePersonaForm
+        {
+            public function configure()
+            {    
+                // widgets
+            
+                $this->widgetSchema['pais'] = new sfWidgetFormArrayDependentSelect(array(
+                    'callable' => array('MisDatos', 'getPaises'),
+                ));
+                
+                $this->widgetSchema['provincia'] = new sfWidgetFormArrayDependentSelect(array(
+                    'callable' => array('MisDatos', 'getProvincias'),
+                    'depends' => 'pais',
+                ));            
+                
+                // validators
+                
+                $this->validatorSchema['pais'] = new sfValidatorChoice(array(
+                    'choices' => MisDatos::getPaises(),
+                ));
+                
+                $this->validatorSchema['provincia'] = new sfValidatorChoice(array(
+                    'choices' => MisDatos::getProvincias(),
+                ));
+            }
+        }
+
+Also works by enabling ajax.
+
+
+Options reference 
+=================
+
+By widget, in bold, are those required. The symbol ">" means that the widget 
+extends the other.
+
+
+sfWidgetFormDependentSelect
+---------------------------
+
+  * _**depends** = null:_ How else select will depend on? It can be the field 
+    name or model. The widget is responsible for determining the detail according 
+    to this value,
+               
+  * _add\_empty = true:_ Specify if you add a blank option. It may be true, 
+    false or text you want to display,
+
+  * _ajax = false:_ Specifies whether remote calls are used to populate the 
+    select values,
+    
+  * _cache = true:_ Specifies whether to use the cache of values from a select 
+    once it was loaded remotely (to avoid extra requests),
+    
+  * _url = sfDependentSelectAuto/\_ajax:_ URL where you will make remote calls 
+    to load the selects. The value should not be of the "module / action' or path 
+    name (the method of sfWebController genUrl can be used to genre),
+    
+  * _params = array():_ Additional parameters to send to the remote call,
+    
+  * _source\_class = null:_ The class that is used as data source. 
+    (See later in customizing).
+  
+  * _source\_params = array():_ Parameters sent to the data source.
+
+  * _force\_group = null:_ Indicates the set of values to be displayed by
+     default on page load.
+    
+sfWidgetFormArrayDependentSelect > sfWidgetFormDependentSelect
+--------------------------------------------------------------
+
+  * _**callable** = null:_ Function or method to be called in order to request 
+    the array. In case of a static method, indicate: array ('class', 'method'). 
+    Do not use instances of classes such as $ this, it will not work on remote 
+    calls.
+
+ * _callable\_params = null:_ Parameters to be passed to the function or
+     method described in the "callable" option.
+
+  * inherited: **depends, add_empty, ajax, cache, url, params**
+
+  
+sfWidgetFormObjectDependentSelect > sfWidgetFormDependentSelect
+---------------------------------------------------------------
+
+  * _**model** = null:_ Model to be listed in this select
+  
+  * _method = __toString:_ Method for the text of each option
+  
+  * _key\_method = getId:_ Method for each option value
+  
+  * _ref\_method = null:_ Method of 'depends' relationships
+  
+  * _order\_by = null:_ List order, array type ('column', {'asc'|'desc'})
+
+  * inherited: **depends, add_empty, ajax, cache, url, params**
+
+  
+sfWidgetFormDoctrineDependentSelect > sfWidgetFormObjectDependentSelect
+-----------------------------------------------------------------------
+
+  * _table\_method = null:_ Method called in the Table class of the object to 
+    return the values to display.
+
+  * inherited: **depends, add_empty, ajax, cache, url, params, model, method, 
+    key_method, ref_method, order_by**
+
+    
+sfWidgetFormPropelDependentSelect > sfWidgetFormObjectDependentSelect
+---------------------------------------------------------------------
+
+  * _peer\_method = doSelect:_ Method is called in the Peer class of the object 
+    to return the values to display.
+
+  * inherited: **depends, add_empty, ajax, cache, url, params, model, method, 
+    key_method, ref_method, order_by**
+    
+
+Customizing
+===========
+
+In case you want to keep data control in both remote or local calls it can be 
+done in several ways.
+
+
+Using option '{table|peer}_method'
+----------------------------------
+
+If you work with an ORM, the easy-way is to especify the option 
+'{table|peer}_method' in the widget and then deploy to the corresponding class.
+
+An example to return only those provinces that are producing.
+
+  * _lib/form/doctrine/PersonaForm.class.php:_
+
+        class PersonaForm extends BasePersonaForm
+        {
+            public function configure()
+            {    
+                ...
+                
+                $this->widgetSchema['provincia'] = new sfWidgetFormDoctrineDependentSelect(array(
+                    'model'        => 'Provincia',
+                    'depends'      => 'Pais',
+                    'table_method' => 'getProductorasQuery',
+                ));            
+                
+                ...
+            }
+        }
+
+  * _lib/model/doctrine/ProvinciaTable.class:_
+
+        class ProvinciaTable extends Doctrine_Table
+        {    
+            public function getProductorasQuery($refValue)
+            {
+                return $this->createQuery('p')->where('p.es_productora = true and p.pais_id = ?', $refValue);
+            }
+        }
+
+It is important to know that when the action calls the {table|peer} method, the 
+referent value is set as a parameter, in order to be able to filter your data 
+according to the select value wich it depends.
+
+
+Creating you own data source or widget
+--------------------------------------
+
+If you want to use another data source (if not using an ORM or just an RSS feed), 
+you can easily create a custom. This way you can take advantage of the automation 
+of both local and remote calls and link with other dependent selects using other 
+sources.
+
+Next how to create your own data source for producing provinces.
+
+  * _lib/ProvinciaProductoraSource.class.php:_
+
+        class ProvinciaProductoraSource extends sfDependentSelectObjectSource
+        {   
+            public function getObjects($fk = null)
+            {
+                return ProvinciaTable::getInstance()->createQuery('p')
+                    ->where('p.es_productora = true and p.pais_id = ?', $fk)
+                    ->execute();
+            }
+            
+            public function getObject($pk)
+            {   
+                return ProvinciaTable::getInstance()->find($pk);
+            }
+        }
+
+  * _lib/form/doctrine/PersonaForm.class.php:_
+
+        class PersonaForm extends BasePersonaForm
+        {
+            public function configure()
+            {    
+                ...
+                
+                // note that if you use your own data source you have to
+                // use the fWidgetFormDependentSelect widget
+                
+                $this->widgetSchema['provincia'] = new sfWidgetFormDependentSelect(array(
+                    'depends'      => 'Pais',
+                    'source_class' => 'ProvinciaProductoraSource',
+                    // you cal also send parameters to the source
+                    #'source_params'=> array('excepto' => 'Santa Fé'),
+                ));
+                
+                ...
+            }
+        }
+
+In this example we have extended to _sfDependentSelectObjectSource_ it makes 
+easy to work with objects, but if you want create an RSS feed, echo on how 
+_sfWidgetFormArrayDependentSelect_ does.
+
+You can also create your own widget to always use this source or add other 
+functionality, look at sfWidgetFormDependentSelect sfDependentSelectSource 
+classes to learn how to create your own.
+
+
+Extending you module
+--------------------
+
+Another way is to extend your module to sfActionsDependentSelect and define 
+methods for getValuesFor {name} and getRefValueFor {name}. Do not forget to 
+specify your action in the 'url' of the widget.
+
+Let's look at the example of countries, if we return the provinces in this way:
+
+  * _apps/tuapp/modules/tumodulo/actions/actions.class.php:_
+
+        class tuModuloActions extends sfActionsDependentSelect
+        {
+            protected function getValuesForPersonaProvincia($request, $source)
+            {
+                // in this case we work with objects, but you can do it anyway
+                // always returning an array with an id as a key
+                // and the text as the array values.
+                
+                $valores = array();
+                $provincias = ProvinciaTable::getInstance()->createQuery('p')
+                    ->where('p.pais_id = ? and p.es_productora = true')
+                    ->execute($request->getParameter('_ds_ref'));
+                
+                // the _ds_ref  parameter contains the select value wich it depends
+                // in this case will be the value for pais.id
+                
+                foreach ($provincias as $provincia) {
+                    $valores[$provincia->getId()] = $provincia->getNombre();
+                }
+                
+                return $valores;
+            }
+            
+            protected function getRefValueForPersonaProvincia($request, $source)
+            {
+                // this method is used in order to "rebuild" the selects chain
+                // depending of inverse order. It means Only if you have
+                // the province value, you have to know wich country it belong to
+                // in order to select it from the country select.
+                // in this case the value of _ds_ref is the actual value of the select
+                // of provinces (provincia.id) and we have to return wich country
+                // it belongs (provincia.pais_id)
+                
+                $provincia = ProvinciaTable::getInstance()->find($request->getParameter('_ds_ref'));
+                return $provincia->getPaisId();
+            }
+        }    
+
+Note  that each method also receives as a parameter the data source in case you
+need.
+
+You can check sfActionsDependentSelect class to learn more about how to extend 
+the functionality in your module.
+
+If you can not extend your module class and  definitely any of the forms offered 
+above meet your needs, you must implement an action  on your module that contains  
+all the functionality as the  '_ajax' action _sfActionsDependentSelect_ class 
+does. With Firebug you can see the parameters sent  via POST.
+
+
+About javascript code
+=====================
+
+By default the plugin is included in both versions of the script, normal and 
+minimized. Always minimized charged unless you change your settings:
+
+  * _apps/tuapp/config/app.yml:_
+
+        dev:
+          app:
+            ...
+            sfDependentSelectPlugin:
+              js: normal
+
+You can also set 'false' to not load the script. The value to show minimized 
+is 'minimized'.
+
+
+¿Sugestions?
+============
+
+Unfortunately I do not speak English and have developed most of the code trying 
+to use English terminology with the help of  automatic translators. I apologize 
+for inconsistencies found and I preciate be informed in order to be corrected.
+
+You can write to my personal email for any suggestions or concerns. 
+I gladly will improve the aspects if necessary
+
+Agradecimientos
+===============
+
+To **César Mercol** (my cousin) for so kindly offered to translate the 
+documentation and all members of the list of symfony-es to form this great 
+community.
+
+
+TODO
+----
+
+  * Working test in symfony 1.1 y 1.2

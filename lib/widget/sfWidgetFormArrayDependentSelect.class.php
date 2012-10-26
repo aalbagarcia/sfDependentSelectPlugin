@@ -46,6 +46,7 @@ class sfWidgetFormArrayDependentSelect extends sfWidgetFormDependentSelect
     protected function configure($options = array(), $attributes = array()) 
     {
         $this->addRequiredOption('callable', null);
+        $this->addOption('callable_params', array());
         
         parent::configure($options, $attributes);
     }
@@ -63,6 +64,7 @@ class sfWidgetFormArrayDependentSelect extends sfWidgetFormDependentSelect
     public function render($name, $value = null, $attributes = array(), $errors = array())
     {
         $this->setSourceParam('callable', $this->getOption('callable'));
+        $this->setSourceParam('params', $this->getOption('callable_params'));
         
         return parent::render($name, $value, $attributes, $errors);
     }
