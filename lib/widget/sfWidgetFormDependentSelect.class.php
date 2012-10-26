@@ -40,7 +40,9 @@ class sfWidgetFormDependentSelect extends sfWidgetForm
         // source
         $this->addRequiredOption('source_class', '');
         $this->addOption('source_params', array());
-        
+        //custom
+        $this->addOption('force_group', '');
+
         parent::configure($options, $attributes);
     }
 
@@ -93,17 +95,22 @@ class sfWidgetFormDependentSelect extends sfWidgetForm
 
         $jsConfig = json_encode($config);
         $jsVar = $this->generateJavascriptVar($name);
-        $jsGroup = '';
-        if (strlen($value) && ! $group) {
-            $jsGroup = $source->getRefValue($value);
-        } elseif ( ! $this->getOption('depends')) {
-            $jsGroup = $group;
+        $forceGroup = $this->getOption('force_group');
+        $jsGroup = $forceGroup;
+        if (!strlen($jsGroup))
+        {
+          if (strlen($value) && ! $group) {
+              $jsGroup = $source->getRefValue($value);
+          } elseif ( ! $this->getOption('depends')) {
+              $jsGroup = $group;
+          }
+          if (strlen($jsGroup)) {
+              $jsGroup = "'{$jsGroup}'";
+          }
         }
-        if (strlen($jsGroup)) {
-            $jsGroup = "'{$jsGroup}'";
-        }
-        
-        $js = "var $jsVar = new SelectDependiente({$jsConfig}).mostrar({$jsGroup})"
+
+        $js = "var ds_$jsVar = new SelectDependiente({$jsConfig})"
+            . (strlen($forceGroup) ? ".mostrarDependiente({$jsGroup})" : ".mostrar({$jsGroup})")
             . (strlen($value) ? ".seleccionar('{$value}');" : ';');
         
         $script = $this->renderContentTag('script', $js, array('type' => 'text/javascript'));

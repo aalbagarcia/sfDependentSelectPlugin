@@ -17,11 +17,12 @@
 class sfDependentSelectArraySource extends sfDependentSelectSource
 {
     protected
-        $_callable;
+        $_callable,
+        $_params;
         
     public function getValues($refValue = null)
     {
-        $array = call_user_func($this->_callable);
+        $array = call_user_func_array($this->_callable, $this->_params);
         
         if ($refValue) {
             $array = $array[$refValue];
